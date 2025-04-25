@@ -1,0 +1,124 @@
+---
+title: "Capstone Dashboard: Reducing Ultra-Processed Food Consumption"
+author: "Sim Fan"
+date: "`r Sys.Date()`"
+output:
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+# Load necessary libraries
+library(here)
+library(dplyr)
+library(ggplot2)
+library(plotly)
+library(tidyr)
+
+# Read in dataset
+dataset <- read.csv(here("data", "dataset_2.csv"))
+```
+
+Row {data-height=650}
+-------------------------------------
+
+### Knowledge Score Improvement {data-width=70%}
+
+```{r}
+# Prepare dataset
+long_dataset <- dataset %>%
+  select(LiveStreamer, Score_Increase, ends_with("t")) %>%
+  pivot_longer(cols = ends_with("t"),
+               names_to = "Question",
+               values_to = "Value")
+
+bar_data <- long_dataset %>%
+  filter(Value == 1) %>%
+  group_by(Question, LiveStreamer) %>%
+  summarise(Average_Score_Increase = round(mean(Score_Increase, na.rm = TRUE), 1), .groups = "drop")
+
+total_score_increase <- bar_data %>%
+  group_by(Question) %>%
+  summarise(Total_Score_Increase = round(sum(Average_Score_Increase), 1))
+
+bar_data <- bar_data %>%
+  mutate(LiveStreamer = factor(LiveStreamer, levels = c("Streamer A", "Streamer B", "Streamer C"))) %>%
+  arrange(Question, desc(LiveStreamer)) %>%
+  group_by(Question) %>%
+  mutate(Cumulative_Score = cumsum(Average_Score_Increase),
+         Mid_Position = Cumulative_Score - (Average_Score_Increase / 2))
+
+# Plot
+stacked_bar_plot <- ggplot() +
+  geom_bar(data = bar_data, aes(x = Question, y = Average_Score_Increase, fill = LiveStreamer),
+           stat = "identity", position = "stack", alpha = 0.8) +
+  geom_text(data = bar_data, aes(x = Question, y = Mid_Position, label = Average_Score_Increase),
+            size = 3, color = "white") +
+  geom_text(data = total_score_increase, aes(x = Question, y = Total_Score_Increase + 0.2, label = Total_Score_Increase),
+            color = "black", size = 4) +
+  labs(title = "Which Questions Help Improve Knowledge Score the Most",
+       x = "Question", y = "Average Score Increase", fill = "Live Streamer") +
+  theme_minimal()
+
+ggplotly(stacked_bar_plot, tooltip = c("x", "y", "fill"))
+```
+
+### Dataset Description {data-width=30%}
+
+This dataset was generated using ChatGPT for demonstration purposes to simulate expected study data.  
+Sample size: 500 responses.  
+Data would be collected from U.S.-based gamers via online surveys during livestream interventions in 2025.  
+The source is confidential because no real participants were involved.
+
+**Summary:**  
+The first widget shows how each question and streamer contributed to improving knowledge scores. Q2 and Q3 shows the most Score increase showing that these two questions has great health promotion effects 
+
+Row {data-height=650}
+-------------------------------------
+
+### Pre and Post Survey Scores {data-width=70%}
+
+```{r}
+# Prepare dataset
+score_data <- dataset %>%
+  group_by(LiveStreamer) %>%
+  summarise(
+    Average_Pre_Survey = round(mean(Pre_survey_Total, na.rm = TRUE), 1),
+    Average_Post_Survey = round(mean(Post_survey_Total, na.rm = TRUE), 1),
+    Average_Score_Increase = round(mean(Score_Increase, na.rm = TRUE), 1)
+  )
+
+score_data_long <- score_data %>%
+  pivot_longer(cols = c(Average_Pre_Survey, Average_Post_Survey, Average_Score_Increase),
+               names_to = "Score_Type",
+               values_to = "Score")
+
+# Color map
+score_colors <- c("Average_Pre_Survey" = "blue", 
+                  "Average_Post_Survey" = "green", 
+                  "Average_Score_Increase" = "orange")
+
+# Plot
+grouped_bar_plot <- ggplot(score_data_long, aes(x = LiveStreamer, y = Score, fill = Score_Type,
+                                                text = paste("Streamer:", LiveStreamer,
+                                                             "<br>Type:", Score_Type,
+                                                             "<br>Score:", Score))) +
+  geom_bar(stat = "identity", position = "dodge", alpha = 0.8) +
+  scale_fill_manual(values = score_colors,
+                    labels = c("Pre-Survey", "Post-Survey", "Score Increase")) +
+  labs(title = "Total Pre-Survey, Post-Survey, and Score Increase by Streamer",
+       x = "Live Streamer", y = "Scores", fill = "Score Type") +
+  theme_minimal()
+
+ggplotly(grouped_bar_plot, tooltip = "text")
+```
+
+### Why This Project Matters {data-width=30%}
+
+This project offers a new way to promote healthier eating habits among gamers by embedding nutrition education into livestream content.  
+The findings can help public health programs reach digital communities that traditional health campaigns often miss.
+
+**Summary:**  
+This widget compares each streamer’s pre-survey, post-survey, and knowledge score increase. Streamer C achieved the greatest average score improvement, while Streamer A has the lowest score improvement, showing that the Streamer A maybe are not following the protocal that we give , thus Health promotion is not that effective.
+
