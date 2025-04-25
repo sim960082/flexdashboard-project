@@ -11,7 +11,7 @@ It uses a flexdashboard to visualize pre- and post-survey results from a simulat
 
 ## Dataset
 The dataset used was generated using ChatGPT to simulate expected responses from U.S.-based gamers.  
-Sample size: 500 participants.  
+Sample size: 150 participants in this mock data. We anticipate to have 500 participant in real life  
 Data were intended to mimic surveys collected during a livestream-based health education intervention.  
 This dataset is confidential and used for demonstration only.
 
